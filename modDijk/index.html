@@ -230,39 +230,57 @@
 
                 if (simulationRef.current) simulationRef.current.stop();
                 
+                // -- UPDATED: Added collision force and tuned repulsion --
                 const simulation = d3.forceSimulation(nodes)
-                    .force("link", d3.forceLink(edges).id((d) => d.id).distance(150))
-                    .force("charge", d3.forceManyBody().strength(-800))
-                    .force("center", d3.forceCenter(width / 2, height / 2));
+                    .force("link", d3.forceLink(edges).id((d) => d.id).distance(120)) // Increased distance slightly for room
+                    .force("charge", d3.forceManyBody().strength(-1000)) // Stronger repulsion to reduce clutter
+                    .force("center", d3.forceCenter(width / 2, height / 2))
+                    .force("collide", d3.forceCollide().radius(35).iterations(2)); // Prevent overlap
+
+                // -- NEW: Pre-warm the simulation --
+                // This manually ticks the simulation 300 times before rendering
+                // to avoid the initial "tangled hairball" explosion effect.
+                simulation.stop();
+                simulation.tick(300);
+                simulation.restart();
                 
                 simulationRef.current = simulation;
                 svg.selectAll("*").remove();
 
+                // -- UPDATED: Initialize positions with current simulation state --
+                // Added x1, y1, cx, cy initial attributes so they start at settled positions
                 const link = svg.append("g").selectAll("line").data(edges).join("line")
                     .attr("class", "link link-line")
                     .attr("stroke", "#374151").attr("stroke-opacity", 0.6)
-                    .attr("stroke-width", (d) => Math.max(2, Math.sqrt(d.weight / 2)));
+                    .attr("stroke-width", (d) => Math.max(2, Math.sqrt(d.weight / 2)))
+                    .attr("x1", (d) => d.source.x).attr("y1", (d) => d.source.y)
+                    .attr("x2", (d) => d.target.x).attr("y2", (d) => d.target.y);
 
                 const edgeLabels = svg.append("g").selectAll("text").data(edges).join("text")
                     .attr("class", "text-xs fill-gray-500 font-bold pointer-events-none")
                     .attr("text-anchor", "middle")
-                    .text((d) => d.weight);
+                    .text((d) => d.weight)
+                    .attr("x", (d) => (d.source.x + d.target.x) / 2)
+                    .attr("y", (d) => (d.source.y + d.target.y) / 2);
 
                 const node = svg.append("g").selectAll("circle").data(nodes).join("circle")
                     .attr("class", "node node-circle")
                     .attr("r", 20).attr("fill", "#1f2937")
                     .attr("stroke", "#4b5563").attr("stroke-width", 2)
+                    .attr("cx", (d) => d.x).attr("cy", (d) => d.y)
                     .call(drag(simulation));
 
                 const nodeLabels = svg.append("g").selectAll("text").data(nodes).join("text")
                     .attr("class", "node-label text-sm fill-white font-bold")
                     .attr("text-anchor", "middle").attr("dy", ".35em")
-                    .text((d) => d.id);
+                    .text((d) => d.id)
+                    .attr("x", (d) => d.x).attr("y", (d) => d.y);
 
                 const nodeHeightLabels = svg.append("g").selectAll("text").data(nodes).join("text")
                     .attr("class", "node-height-text font-mono")
                     .attr("text-anchor", "middle")
-                    .attr("dy", "3.2em");
+                    .attr("dy", "3.2em")
+                    .attr("x", (d) => d.x).attr("y", (d) => d.y);
 
                 simulation.on("tick", () => {
                     link.attr("x1", (d) => d.source.x).attr("y1", (d) => d.source.y)
