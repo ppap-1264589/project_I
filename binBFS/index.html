@@ -477,7 +477,8 @@ document.addEventListener('DOMContentLoaded', () => {
           .attr("x2", d => d.target.x).attr("y2", d => d.target.y);
 
         const edgeLabels = svg.append("g").selectAll("text").data(edges).join("text")
-          .attr("class", "text-xs fill-current text-gray-400 font-bold")
+          .attr("class", "text-xs fill-gray-500 font-bold pointer-events-none")
+          .attr("text-anchor", "middle")
           .text(d => d.weight)
           .attr("x", d => (d.source.x + d.target.x) / 2)
           .attr("y", d => (d.source.y + d.target.y) / 2);
@@ -681,4 +682,3 @@ d.fx = null; d.fy = null;
 </script>
 </body>
 </html>
-```

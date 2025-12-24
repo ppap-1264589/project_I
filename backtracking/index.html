@@ -77,7 +77,7 @@
                      <h2 class="text-xl font-bold text-cyan-400 mb-4">Simulation Status</h2>
                     <div class="space-y-3 text-sm flex-grow overflow-y-auto pr-1">
                         <div class="p-3 bg-gray-900/50 rounded-lg border border-gray-700">
-                            <h3 class="font-bold text-gray-300 mb-2">Current State</h3>
+                            <h3 class="text-base font-bold text-cyan-400 mb-2">Current State</h3>
                             <div class="space-y-2">
                                 <div class="flex justify-between items-center">
                                     <span class="font-semibold text-gray-400">Current Node:</span>
@@ -87,14 +87,6 @@
                                     <span class="font-semibold text-gray-400">Min Weight (Current):</span>
                                     <span id="current-min-weight" class="font-mono bg-gray-700 px-2 py-1 rounded text-cyan-300">N/A</span>
                                 </div>
-                                <div class="flex justify-between items-center">
-                                    <span class="font-semibold text-gray-400">Nodes Visited:</span>
-                                    <span id="nodes-visited-count" class="font-mono bg-gray-700 px-2 py-1 rounded text-green-400">0</span>
-                                </div>
-                                <div class="flex justify-between items-center">
-                                    <span class="font-semibold text-gray-400">Edges Explored:</span>
-                                    <span id="edges-explored-count" class="font-mono bg-gray-700 px-2 py-1 rounded text-blue-400">0</span>
-                                </div>
                                 <div>
                                     <span class="font-semibold text-gray-400">Current Path:</span>
                                     <p id="current-path" class="font-mono bg-gray-700 p-2 rounded break-words mt-1 text-gray-300">[]</p>
@@ -103,7 +95,7 @@
                         </div>
 
                         <div class="p-3 bg-gray-900/50 rounded-lg border border-gray-700">
-                            <h3 class="font-bold text-gray-300 mb-2">Best Result So Far</h3>
+                            <h3 class="text-base font-bold text-cyan-400 mb-2">Best Result So Far</h3>
                             <div class="space-y-2">
                                 <div class="flex justify-between items-center">
                                     <span class="font-semibold text-gray-400">Min Weight (Best):</span>
@@ -112,6 +104,20 @@
                                 <div>
                                     <span class="font-semibold text-gray-400">Best Path Found:</span>
                                     <p id="best-path" class="font-mono bg-emerald-500/20 text-emerald-300 p-2 rounded break-words mt-1">[]</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="p-3 bg-gray-900/50 rounded-lg border border-gray-700">
+                            <h3 class="text-base font-bold text-cyan-400 mb-2">Algorithm Cost</h3>
+                            <div class="space-y-2">
+                                <div class="flex justify-between items-center">
+                                    <span class="font-semibold text-gray-400">Total Nodes Visited:</span>
+                                    <span id="nodes-visited-count" class="font-mono bg-gray-700 px-2 py-1 rounded text-green-400">0</span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <span class="font-semibold text-gray-400">Total Edges Explored:</span>
+                                    <span id="edges-explored-count" class="font-mono bg-gray-700 px-2 py-1 rounded text-blue-400">0</span>
                                 </div>
                             </div>
                         </div>
@@ -529,7 +535,8 @@ document.addEventListener('DOMContentLoaded', () => {
           .attr("x2", d => d.target.x).attr("y2", d => d.target.y);
 
         const edgeLabels = svg.append("g").selectAll("text").data(edges).join("text")
-          .attr("class", "text-sm fill-current text-gray-400 font-bold")
+          .attr("class", "text-xs fill-gray-500 font-bold pointer-events-none")
+          .attr("text-anchor", "middle")
           .text(d => d.weight)
           .attr("x", d => (d.source.x + d.target.x) / 2)
           .attr("y", d => (d.source.y + d.target.y) / 2);
@@ -723,4 +730,3 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
-```
