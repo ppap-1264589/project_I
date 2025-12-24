@@ -375,7 +375,22 @@
 
         // --- From App.tsx ---
         function App() {
-            const defaultEdges = `1 2 20\n1 3 15\n1 4 10\n2 3 8\n2 5 12\n3 4 5\n3 5 10\n4 5 7`;
+            const defaultEdges = `1 2 20
+1 3 15
+1 4 10
+2 3 8
+2 5 8
+3 4 16
+3 5 10
+4 5 100
+5 6 10
+5 7 23
+6 8 24
+7 8 12
+5 9 12
+6 9 30
+7 9 17
+8 9 23`;
             const [edgesInput, setEdgesInput] = useState(defaultEdges);
             const [startNode, setStartNode] = useState('1');
             const [targetNode, setTargetNode] = useState('5');
