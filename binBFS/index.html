@@ -290,7 +290,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             const queue = [startNode];
             const marked = new Set([startNode]);
-            totalNodesVisited++; // Count start node for this BFS run
+            // totalNodesVisited++; // REMOVED: Don't count when pushing/initially
             const parentMap = new Map();
             const processedNodes = new Set();
             let pathFound = false;
@@ -303,6 +303,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             bfs_loop: while (queue.length > 0) {
                 const u = queue.shift();
+                totalNodesVisited++; // ADDED: Increment when popped (processed) and turned red
                 
                 yield { ...bestState, phase: 'bfs-running', L, R, mid, currentNode: u, queue: [...queue], markedNodes: new Set(marked), parentMap: new Map(parentMap), processedNodes: new Set(processedNodes), logMessage: `BFS: Dequeued node ${u}.`, nodesVisited: totalNodesVisited, edgesExplored: totalEdgesExplored};
 
@@ -319,7 +320,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         continue;
                     }
                     
-                    totalNodesVisited++;
+                    // totalNodesVisited++; // REMOVED: Don't count when pushing
                     marked.add(v);
                     parentMap.set(v, u);
                     queue.push(v);
@@ -682,3 +683,4 @@ d.fx = null; d.fy = null;
 </script>
 </body>
 </html>
+   
