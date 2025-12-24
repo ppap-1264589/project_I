@@ -21,7 +21,8 @@ void Dijkstra_new(int s, int t){
         PQ.pop();
 
         if (curr_height < height[u]) continue;
-
+        if (u == t) continue;
+        
         for (pii g : a[u]){
             int v = g.first;
             int w = g.second;

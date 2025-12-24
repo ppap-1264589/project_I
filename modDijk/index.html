@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -50,6 +51,9 @@
                 adj.get(v).push({ v: u, w: edge.weight });
             }
 
+            let nodesVisitedCount = 0;
+            let edgesExploredCount = 0;
+
             const height = {};
             const before = {};
             graph.nodes.forEach(n => {
@@ -68,7 +72,7 @@
             let currentLog = `Init: Node ${s} capacity = ∞`;
             yield {
                 phase: 'init', heights: { ...height }, before: { ...before }, pq: [...pq], u: null,
-                log: currentLog
+                log: currentLog, nodesVisitedCount, edgesExploredCount
             };
 
             while (pq.length > 0) {
@@ -78,25 +82,25 @@
                 const curr_h = top.h;
                 const poppedKey = top.key;
                 
-                // Keep the previous log during the "pre-pop" animation phase to reduce noise
                 yield {
                     phase: 'pre-pop', heights: { ...height }, before: { ...before }, pq: [...pq], u: u, poppedKey: poppedKey,
-                    log: currentLog
+                    log: currentLog, nodesVisitedCount, edgesExploredCount
                 };
                 
                 pq.shift();
+                nodesVisitedCount++;
 
                 if (curr_h < height[u]) {
                     currentLog = `Skip ${u}: Stale entry (${curr_h} < ${height[u]})`;
                     yield {
                         phase: 'skip-highlight', heights: { ...height }, before: { ...before }, pq: [...pq], u: u,
-                        log: currentLog
+                        log: currentLog, nodesVisitedCount, edgesExploredCount
                     };
                     
                     currentLog = `Skip ${u}: A better path already exists`;
                     yield {
                         phase: 'skip', heights: { ...height }, before: { ...before }, pq: [...pq], u: u,
-                        log: currentLog
+                        log: currentLog, nodesVisitedCount, edgesExploredCount
                     };
                     continue;
                 }
@@ -104,20 +108,21 @@
                 currentLog = `Pop ${u} (cap=${curr_h === MOD ? '∞' : curr_h})`;
                 yield {
                     phase: 'pop', heights: { ...height }, before: { ...before }, pq: [...pq], u: u,
-                    log: currentLog
+                    log: currentLog, nodesVisitedCount, edgesExploredCount
                 };
 
                 if (u === t) {
                     currentLog = `Destination ${t} found. Path finalized.`;
                     yield {
                         phase: 'check-edge', heights: { ...height }, before: { ...before }, pq: [...pq], u: u,
-                        log: currentLog
+                        log: currentLog, nodesVisitedCount, edgesExploredCount
                     };
                     continue;
                 }
 
                 const neighbors = adj.get(u) || [];
                 for (const edge of neighbors) {
+                    edgesExploredCount++;
                     const v = edge.v;
                     const w = edge.w;
                     const new_h = Math.min(curr_h, w);
@@ -125,7 +130,7 @@
                     currentLog = `Check ${u}→${v}: Min(${curr_h === MOD ? '∞' : curr_h}, ${w}) = ${new_h}`;
                     yield {
                         phase: 'check-edge', heights: { ...height }, before: { ...before }, pq: [...pq], u: u, v: v, edgeWeight: w,
-                        log: currentLog
+                        log: currentLog, nodesVisitedCount, edgesExploredCount
                     };
 
                     if (new_h > height[v]) {
@@ -137,29 +142,29 @@
                         pq.push({ id: v, h: new_h, key: pqKeyCounter++ });
                         yield {
                             phase: 'relax-pushed', heights: { ...height }, before: { ...before }, pq: [...pq], u: u, v: v,
-                            log: currentLog
+                            log: currentLog, nodesVisitedCount, edgesExploredCount
                         };
 
                         pq.sort(pqSort);
                         yield {
                             phase: 'relax-sorted', heights: { ...height }, before: { ...before }, pq: [...pq], u: u, v: v,
-                            log: currentLog
+                            log: currentLog, nodesVisitedCount, edgesExploredCount
                         };
                         
                         yield {
                            phase: 'post-sort-wait', heights: { ...height }, before: { ...before }, pq: [...pq], u: u, v: v,
-                           log: currentLog 
+                           log: currentLog, nodesVisitedCount, edgesExploredCount
                         }
 
                     } else {
                         currentLog = `No capacity update for ${v}`;
                         yield {
                             phase: 'no-relax-highlight', heights: { ...height }, before: { ...before }, pq: [...pq], u: u, v: v,
-                            log: currentLog
+                            log: currentLog, nodesVisitedCount, edgesExploredCount
                         };
                          yield {
                             phase: 'no-relax', heights: { ...height }, before: { ...before }, pq: [...pq], u: u, v: v,
-                            log: currentLog
+                            log: currentLog, nodesVisitedCount, edgesExploredCount
                         };
                     }
                 }
@@ -179,7 +184,8 @@
 
             return {
                 phase: 'finished', heights: { ...height }, before: { ...before }, pq: [], u: null, path: path,
-                log: `Done. Capacity: ${height[t] > 0 ? height[t] : 'N/A'}. Path: ${path.length > 0 ? path.join('→') : 'Not found'}`
+                log: `Done. Capacity: ${height[t] > 0 ? height[t] : 'N/A'}. Path: ${path.length > 0 ? path.join('→') : 'Not found'}`,
+                nodesVisitedCount, edgesExploredCount
             };
         }
 
@@ -675,6 +681,20 @@
                                              <div>
                                                 <span className="font-semibold text-gray-400">Trace Path:</span>
                                                 <p className="font-mono bg-emerald-500/20 text-emerald-300 p-2 rounded break-words mt-1">{stepState.path ? stepState.path.join(' → ') : '[]'}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                     <div className="p-3 bg-gray-900/50 rounded-lg border border-gray-700">
+                                        <h3 className="text-base font-bold text-cyan-400 mb-2">Algorithm Cost</h3>
+                                        <div className="space-y-2">
+                                            <div className="flex justify-between items-center">
+                                                <span className="font-semibold text-gray-400">Total Nodes Visited:</span>
+                                                <span className="font-mono bg-gray-700 px-2 py-1 rounded text-green-400">{stepState.nodesVisitedCount ?? 0}</span>
+                                            </div>
+                                            <div className="flex justify-between items-center">
+                                                <span className="font-semibold text-gray-400">Total Edges Explored:</span>
+                                                <span className="font-mono bg-gray-700 px-2 py-1 rounded text-blue-400">{stepState.edgesExploredCount ?? 0}</span>
                                             </div>
                                         </div>
                                     </div>

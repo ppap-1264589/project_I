@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -86,6 +87,14 @@
                                     <span class="font-semibold text-gray-400">Min Weight (Current):</span>
                                     <span id="current-min-weight" class="font-mono bg-gray-700 px-2 py-1 rounded text-cyan-300">N/A</span>
                                 </div>
+                                <div class="flex justify-between items-center">
+                                    <span class="font-semibold text-gray-400">Nodes Visited:</span>
+                                    <span id="nodes-visited-count" class="font-mono bg-gray-700 px-2 py-1 rounded text-green-400">0</span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <span class="font-semibold text-gray-400">Edges Explored:</span>
+                                    <span id="edges-explored-count" class="font-mono bg-gray-700 px-2 py-1 rounded text-blue-400">0</span>
+                                </div>
                                 <div>
                                     <span class="font-semibold text-gray-400">Current Path:</span>
                                     <p id="current-path" class="font-mono bg-gray-700 p-2 rounded break-words mt-1 text-gray-300">[]</p>
@@ -153,6 +162,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const currentPathEl = document.getElementById('current-path');
     const bestPathEl = document.getElementById('best-path');
     const logMessageEl = document.getElementById('log-message');
+    const nodesVisitedCountEl = document.getElementById('nodes-visited-count');
+    const edgesExploredCountEl = document.getElementById('edges-explored-count');
 
     const visContainer = document.getElementById('vis-container');
     const visCanvas = document.getElementById('vis-canvas');
@@ -251,6 +262,9 @@ document.addEventListener('DOMContentLoaded', () => {
       let truePath = [];
       const tempPath = [startNode];
       const marked = new Set([startNode]);
+      let nodesVisitedCount = 1;
+      let edgesExploredCount = 0;
+
 
       async function* tryStep(u, currentMin) {
         if (u === destination) {
@@ -261,12 +275,14 @@ document.addEventListener('DOMContentLoaded', () => {
               currentNode: u, currentPath: [...tempPath], markedNodes: new Set(marked), bestPath: [...truePath],
               currentMinWeight: currentMin, bestMinWeight: best, logMessage: `Found new best path with min-weight ${best}.`,
               isUpdatingBest: true,
+              nodesVisited: nodesVisitedCount, edgesExplored: edgesExploredCount,
             };
           } else {
              yield {
               currentNode: u, currentPath: [...tempPath], markedNodes: new Set(marked), bestPath: [...truePath],
               currentMinWeight: currentMin, bestMinWeight: best, logMessage: `Found path, but min-weight ${currentMin} not better than ${best}.`,
               isSuboptimalPathFound: true,
+              nodesVisited: nodesVisitedCount, edgesExplored: edgesExploredCount,
             };
           }
           return;
@@ -274,38 +290,44 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const neighbors = adj.get(u) || [];
         for (const { v, w } of neighbors) {
-          yield {
-            currentNode: u, currentPath: [...tempPath], markedNodes: new Set(marked), bestPath: [...truePath],
-            currentMinWeight: currentMin, bestMinWeight: best, logMessage: `Considering edge ${u} -> ${v} with weight ${w}.`,
-            consideringEdge: { source: u, target: v },
-          };
 
           if (marked.has(v)) {
+            edgesExploredCount++;
             yield {
               currentNode: u, currentPath: [...tempPath], markedNodes: new Set(marked), bestPath: [...truePath],
               currentMinWeight: currentMin, bestMinWeight: best, logMessage: `Node ${v} already visited. Skipping.`,
               consideringEdge: { source: u, target: v },
               isVisitingMarked: true,
+              nodesVisited: nodesVisitedCount,
+              edgesExplored: edgesExploredCount,
             };
             continue;
           }
 
           const newCurrMin = Math.min(currentMin, w);
           if (newCurrMin <= best) {
+            edgesExploredCount++;
             yield {
               currentNode: u, currentPath: [...tempPath], markedNodes: new Set(marked), bestPath: [...truePath],
               currentMinWeight: currentMin, bestMinWeight: best, logMessage: `Pruning path to ${v}. New min-weight ${newCurrMin} <= best ${best}.`,
-              consideringEdge: { source: u, target: v }, isPruning: true,
+              consideringEdge: { source: u, target: v }, 
+              isPruning: true,
+              nodesVisited: nodesVisitedCount,
+              edgesExplored: edgesExploredCount,
             };
             continue;
           }
-
+          
+          edgesExploredCount++;
+          nodesVisitedCount++;
           marked.add(v);
           tempPath.push(v);
           yield {
             currentNode: v, currentPath: [...tempPath], markedNodes: new Set(marked), bestPath: [...truePath],
             currentMinWeight: newCurrMin, bestMinWeight: best, logMessage: `Moving to node ${v}. Path min-weight is ${newCurrMin}.`,
             consideringEdge: { source: u, target: v },
+            nodesVisited: nodesVisitedCount,
+            edgesExplored: edgesExploredCount,
           };
           
           yield* tryStep(v, newCurrMin);
@@ -317,6 +339,8 @@ document.addEventListener('DOMContentLoaded', () => {
             currentMinWeight: currentMin, bestMinWeight: best, logMessage: `Backtracking from ${v} to ${u}.`,
             consideringEdge: { source: u, target: v }, isBacktracking: true,
             backtrackingNode: v,
+            nodesVisited: nodesVisitedCount,
+            edgesExplored: edgesExploredCount,
           };
         }
       }
@@ -324,6 +348,7 @@ document.addEventListener('DOMContentLoaded', () => {
       yield {
         currentNode: startNode, currentPath: [startNode], markedNodes: new Set([startNode]), bestPath: [],
         currentMinWeight: Infinity, bestMinWeight: -1, logMessage: `Starting algorithm from node ${startNode}.`,
+        nodesVisited: nodesVisitedCount, edgesExplored: edgesExploredCount,
       };
 
       yield* tryStep(startNode, Infinity);
@@ -337,6 +362,7 @@ document.addEventListener('DOMContentLoaded', () => {
         bestMinWeight: best,
         logMessage: best > -1 ? `Algorithm finished. Best min-weight is ${best}.` : 'Algorithm finished. No path found.',
         isFinished: true,
+        nodesVisited: nodesVisitedCount, edgesExplored: edgesExploredCount,
       };
     }
 
@@ -560,6 +586,8 @@ document.addEventListener('DOMContentLoaded', () => {
         currentPathEl.textContent = state?.currentPath?.join(' → ') ?? '[]';
         bestPathEl.textContent = state?.bestPath?.join(' → ') ?? '[]';
         logMessageEl.textContent = state?.logMessage ?? '...';
+        nodesVisitedCountEl.textContent = state?.nodesVisited ?? '0';
+        edgesExploredCountEl.textContent = state?.edgesExplored ?? '0';
         
         logMessageEl.className = 'font-mono p-3 rounded mt-1 text-white text-xs border border-gray-700 transition-colors'; // reset
         if(state?.isPruning) logMessageEl.classList.add('bg-red-900/40');
@@ -695,3 +723,4 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
+```

@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -115,6 +116,20 @@
                             </div>
                         </div>
                     </div>
+
+                    <div class="p-3 bg-gray-900/50 rounded-lg border border-gray-700">
+                        <h3 class="text-base font-bold text-cyan-400 mb-2">Algorithm Cost</h3>
+                        <div class="space-y-2">
+                            <div class="flex justify-between items-center">
+                                <span class="font-semibold text-gray-400">Total Nodes Visited:</span>
+                                <span id="nodes-visited-count" class="font-mono bg-gray-700 px-2 py-1 rounded text-green-400">0</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="font-semibold text-gray-400">Total Edges Explored:</span>
+                                <span id="edges-explored-count" class="font-mono bg-gray-700 px-2 py-1 rounded text-blue-400">0</span>
+                            </div>
+                        </div>
+                    </div>
                      
                     <div class="pt-2">
                         <span class="font-semibold text-gray-400 block mb-1">Log:</span>
@@ -164,6 +179,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const bestMinWeightEl = document.getElementById('best-min-weight');
     const bestPathEl = document.getElementById('best-path');
     const logMessageEl = document.getElementById('log-message');
+    const nodesVisitedCountEl = document.getElementById('nodes-visited-count');
+    const edgesExploredCountEl = document.getElementById('edges-explored-count');
+
 
     const visContainer = document.getElementById('vis-container');
     const visCanvas = document.getElementById('vis-canvas');
@@ -198,6 +216,8 @@ document.addEventListener('DOMContentLoaded', () => {
         currentNode: null, queue: [], markedNodes: new Set(), parentMap: new Map(), processedNodes: new Set(),
         consideringEdge: null, isVisitingMarked: false, prunedByWeight: false,
         bestPath: [], bestMinWeight: -1, pathForMid: [],
+        nodesVisited: 0,
+        edgesExplored: 0,
     };
 
     // --- Core Functions ---
@@ -256,6 +276,9 @@ document.addEventListener('DOMContentLoaded', () => {
             maxWeight = Math.max(maxWeight, edge.weight);
         }
 
+        let totalNodesVisited = 0;
+        let totalEdgesExplored = 0;
+
         let L = 0;
         let R = maxWeight + 1;
         let bestState = { ...initialSimulationState };
@@ -263,10 +286,11 @@ document.addEventListener('DOMContentLoaded', () => {
         while (R - L > 1) {
             const mid = Math.floor((L + R) / 2);
             
-            yield { ...bestState, phase: 'binary-search', L, R, mid, canPass: undefined, logMessage: `Testing threshold (mid): ${mid}` };
+            yield { ...bestState, phase: 'binary-search', L, R, mid, canPass: undefined, logMessage: `Testing threshold (mid): ${mid}`, nodesVisited: totalNodesVisited, edgesExplored: totalEdgesExplored };
             
             const queue = [startNode];
             const marked = new Set([startNode]);
+            totalNodesVisited++; // Count start node for this BFS run
             const parentMap = new Map();
             const processedNodes = new Set();
             let pathFound = false;
@@ -280,27 +304,27 @@ document.addEventListener('DOMContentLoaded', () => {
             bfs_loop: while (queue.length > 0) {
                 const u = queue.shift();
                 
-                yield { ...bestState, phase: 'bfs-running', L, R, mid, currentNode: u, queue: [...queue], markedNodes: new Set(marked), parentMap: new Map(parentMap), processedNodes: new Set(processedNodes), logMessage: `BFS: Dequeued node ${u}.`};
+                yield { ...bestState, phase: 'bfs-running', L, R, mid, currentNode: u, queue: [...queue], markedNodes: new Set(marked), parentMap: new Map(parentMap), processedNodes: new Set(processedNodes), logMessage: `BFS: Dequeued node ${u}.`, nodesVisited: totalNodesVisited, edgesExplored: totalEdgesExplored};
 
                 const neighbors = adj.get(u) || [];
                 for (const { v, w } of neighbors) {
-                    yield { ...bestState, phase: 'bfs-running', L, R, mid, currentNode: u, queue: [...queue], markedNodes: new Set(marked), consideringEdge: { source: u, target: v }, parentMap: new Map(parentMap), processedNodes: new Set(processedNodes), logMessage: `BFS: Considering edge ${u} -> ${v} (w=${w})` };
+                    totalEdgesExplored++; // Increment counter before yielding the result of the exploration.
 
                     if (w < mid) {
-                        yield { ...bestState, phase: 'bfs-running', L, R, mid, currentNode: u, queue: [...queue], markedNodes: new Set(marked), consideringEdge: { source: u, target: v }, prunedByWeight: true, parentMap: new Map(parentMap), processedNodes: new Set(processedNodes), logMessage: `Edge ${u} -> ${v} ignored. Weight ${w} < threshold ${mid}.` };
+                        yield { ...bestState, phase: 'bfs-running', L, R, mid, currentNode: u, queue: [...queue], markedNodes: new Set(marked), consideringEdge: { source: u, target: v }, prunedByWeight: true, parentMap: new Map(parentMap), processedNodes: new Set(processedNodes), logMessage: `Edge ${u} -> ${v} ignored. Weight ${w} < threshold ${mid}.`, nodesVisited: totalNodesVisited, edgesExplored: totalEdgesExplored };
                         continue;
                     }
                     if (marked.has(v)) {
-                        yield { ...bestState, phase: 'bfs-running', L, R, mid, currentNode: u, queue: [...queue], markedNodes: new Set(marked), consideringEdge: { source: u, target: v }, isVisitingMarked: true, parentMap: new Map(parentMap), processedNodes: new Set(processedNodes), logMessage: `Node ${v} already visited. Skipping.` };
-                        yield { ...bestState, phase: 'bfs-running', L, R, mid, currentNode: u, queue: [...queue], markedNodes: new Set(marked), consideringEdge: { source: u, target: v }, isVisitingMarked: false, parentMap: new Map(parentMap), processedNodes: new Set(processedNodes), logMessage: `Node ${v} already visited. Skipping.` };
+                        yield { ...bestState, phase: 'bfs-running', L, R, mid, currentNode: u, queue: [...queue], markedNodes: new Set(marked), consideringEdge: { source: u, target: v }, isVisitingMarked: true, parentMap: new Map(parentMap), processedNodes: new Set(processedNodes), logMessage: `Node ${v} already visited. Skipping.`, nodesVisited: totalNodesVisited, edgesExplored: totalEdgesExplored };
                         continue;
                     }
-
+                    
+                    totalNodesVisited++;
                     marked.add(v);
                     parentMap.set(v, u);
                     queue.push(v);
                     
-                    yield { ...bestState, phase: 'bfs-running', L, R, mid, currentNode: u, queue: [...queue], markedNodes: new Set(marked), consideringEdge: { source: u, target: v }, parentMap: new Map(parentMap), processedNodes: new Set(processedNodes), logMessage: `BFS: Enqueued node ${v}.` };
+                    yield { ...bestState, phase: 'bfs-running', L, R, mid, currentNode: u, queue: [...queue], markedNodes: new Set(marked), consideringEdge: { source: u, target: v }, parentMap: new Map(parentMap), processedNodes: new Set(processedNodes), logMessage: `BFS: Enqueued node ${v}.`, nodesVisited: totalNodesVisited, edgesExplored: totalEdgesExplored };
 
                     if (v === targetNode) {
                         pathFound = true;
@@ -308,8 +332,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
                 processedNodes.add(u);
-                yield { ...bestState, phase: 'bfs-running', L, R, mid, currentNode: u, queue: [...queue], markedNodes: new Set(marked), parentMap: new Map(parentMap), processedNodes: new Set(processedNodes), logMessage: `BFS: Finished exploring neighbors of ${u}.` };
-
             }
             
             const pathForMid = [];
@@ -326,13 +348,13 @@ document.addEventListener('DOMContentLoaded', () => {
             if (pathFound) {
                 L = mid;
                 bestState = { ...bestState, bestPath: pathForMid, bestMinWeight: L };
-                yield { ...bestState, phase: 'bfs-result', L, R, mid, canPass: true, pathForMid, logMessage: `Path found for threshold ${mid}. Updating L = ${mid}.` };
+                yield { ...bestState, phase: 'bfs-result', L, R, mid, canPass: true, pathForMid, logMessage: `Path found for threshold ${mid}. Updating L = ${mid}.`, nodesVisited: totalNodesVisited, edgesExplored: totalEdgesExplored };
             } else {
                 R = mid;
-                yield { ...bestState, phase: 'bfs-result', L, R, mid, canPass: false, pathForMid: [], logMessage: `No path for threshold ${mid}. Updating R = ${mid}.` };
+                yield { ...bestState, phase: 'bfs-result', L, R, mid, canPass: false, pathForMid: [], logMessage: `No path for threshold ${mid}. Updating R = ${mid}.`, nodesVisited: totalNodesVisited, edgesExplored: totalEdgesExplored };
             }
         }
-        yield { ...bestState, phase: 'finished', L, R, mid: L, logMessage: `Algorithm finished. Best min-weight: ${L}.` };
+        yield { ...bestState, phase: 'finished', L, R, mid: L, logMessage: `Algorithm finished. Best min-weight: ${L}.`, nodesVisited: totalNodesVisited, edgesExplored: totalEdgesExplored };
     }
 
 
@@ -362,10 +384,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 const isConsidering = consideringEdge && edgeId === getEdgeId(consideringEdge.source, consideringEdge.target);
                 const isTreeEdge = parentMap && ((parentMap.get(d.target.id) === d.source.id) || (parentMap.get(d.source.id) === d.target.id));
 
+                // Priority 1: Current action being visualized
                 if (isConsidering && isVisitingMarked) return "#a855f7"; // purple
+                if (isConsidering && prunedByWeight) return "#ef4444"; // red
+
+                // Priority 2: Final path states
                 if (phase === 'finished' && pathEdges.has(edgeId)) return "#4ade80"; // bright green
                 if (phase === 'bfs-result' && state.canPass && pathEdges.has(edgeId)) return "#22c55e"; // green
+                
+                // Priority 3: Historical state (part of the current BFS tree)
                 if (phase === 'bfs-running' && isTreeEdge) return "#f97316"; // orange
+
+                // Default
                 return "#374151";
             })
             .attr("stroke-width", d => {
@@ -429,19 +459,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (simulation) simulation.stop();
 
-        // --- UPDATED D3 FORCE SETUP ---
         simulation = d3.forceSimulation(nodes)
-          .force("link", d3.forceLink(edges).id(d => d.id).distance(120)) // Reduced distance
-          .force("charge", d3.forceManyBody().strength(-1000)) // Stronger repulsion
+          .force("link", d3.forceLink(edges).id(d => d.id).distance(120))
+          .force("charge", d3.forceManyBody().strength(-1000))
           .force("center", d3.forceCenter(width / 2, height / 2))
-          .force("collide", d3.forceCollide().radius(35).iterations(2)); // Add collision
+          .force("collide", d3.forceCollide().radius(35).iterations(2));
 
-        // --- PRE-WARMING ---
         simulation.stop();
         simulation.tick(300);
         simulation.restart();
 
-        // Initialize elements with coordinates from pre-warmed nodes
         const link = svg.append("g").selectAll("line").data(edges).join("line")
           .attr("class", "link")
           .attr("stroke", "#374151").attr("stroke-opacity", 0.6)
@@ -488,7 +515,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         function dragended(event, d) {
             if (!event.active) simulation.alphaTarget(0);
-            d.fx = null; d.fy = null;
+d.fx = null; d.fy = null;
         }
         return d3.drag().on("start", dragstarted).on("drag", dragged).on("end", dragended);
     }
@@ -513,6 +540,9 @@ document.addEventListener('DOMContentLoaded', () => {
         bestMinWeightEl.textContent = state.bestMinWeight > -1 ? state.bestMinWeight : 'N/A';
         bestPathEl.textContent = state.bestPath.join(' → ') || '[]';
         logMessageEl.textContent = state.logMessage;
+        
+        nodesVisitedCountEl.textContent = state.nodesVisited ?? '0';
+        edgesExploredCountEl.textContent = state.edgesExplored ?? '0';
 
         logMessageEl.className = 'font-mono p-3 rounded mt-1 text-white text-xs border border-gray-700 transition-colors';
         if (state.phase === 'bfs-running') {
@@ -651,3 +681,4 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
+```
