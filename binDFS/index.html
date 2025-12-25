@@ -369,7 +369,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateVisualization(state) {
         if (!graphData || !state) return;
 
-        const { phase, mid, currentPath, currentNode, bestPath, pathForMid, prunedByWeight, isVisitingMarked, consideringEdge } = state;
+        const { phase, mid, currentPath, currentNode, bestPath, pathForMid, prunedByWeight, isVisitingMarked, consideringEdge, logMessage, markedNodes } = state;
         const duration = 200;
 
         const pathEdges = new Set();
@@ -391,7 +391,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (isConsidering && prunedByWeight) return "#ef4444"; // red
                 if (phase === 'finished' && pathEdges.has(edgeId)) return "#4ade80"; // bright green
                 if (phase === 'dfs-result' && state.canPass && pathEdges.has(edgeId)) return "#22c55e"; // green
-                if (phase === 'dfs-running' && pathEdges.has(edgeId)) return "#facc15"; // yellow
+                if (phase === 'dfs-running' && pathEdges.has(edgeId)) return "#f97316"; // orange
                 return "#374151"; // default dark gray
             })
             .attr("stroke-width", d => {
@@ -403,15 +403,46 @@ document.addEventListener('DOMContentLoaded', () => {
         svg.selectAll("circle.node")
             .transition().duration(duration)
             .attr("fill", d => {
-                if (phase === 'finished' && bestPath.includes(d.id)) return "#4ade80"; // bright green
-                if (phase === 'dfs-result' && state.canPass && pathForMid.includes(d.id)) return "#22c55e"; // green
-                if (d.id === currentNode) return "#ef4444"; // red
-                if (phase === 'dfs-running' && currentPath.includes(d.id)) return "#facc15"; // yellow
+                // Final states (highest priority)
+                if (phase === 'finished' && bestPath.includes(d.id)) return "#4ade80";
+                if (phase === 'dfs-result' && state.canPass && pathForMid.includes(d.id)) return "#22c55e";
+                
+                // During the DFS process for a given 'mid'
+                if (phase.startsWith('dfs-')) {
+                    // "Moving to" state: destination is yellow (transient highlight)
+                    const isMovingState = logMessage.startsWith(`DFS: Moving to node ${d.id}`);
+                    if (isMovingState) {
+                        return "#facc15"; // yellow
+                    }
+
+                    // Current node being explored from is red
+                    if (d.id === currentNode) {
+                        return "#ef4444"; // red
+                    }
+
+                    // Node has been visited in this DFS run (and is not the current one)
+                    // This makes the 'visited' state persistent even after backtracking
+                    if (markedNodes && markedNodes.has(d.id)) {
+                        return "#f97316"; // orange
+                    }
+                }
+
+                // Default node color for all other cases
                 return "#1f2937"; // dark gray
             })
             .attr("stroke", d => {
                  if (phase === 'finished' && bestPath.includes(d.id)) return "#fff";
                  if (d.id === currentNode) return "#fff";
+                 
+                 const isMovingState = logMessage.startsWith(`DFS: Moving to node ${d.id}`);
+                 if (isMovingState) {
+                    return "#fde047"; // light yellow
+                 }
+
+                 if (phase === 'dfs-running' && currentPath.includes(d.id)) return "#fdba74"; // light orange
+                 
+                 if(markedNodes && markedNodes.has(d.id)) return "#fdba74"; // light orange for visited
+                 
                  return "#4b5563";
             })
             .attr("r", d => activePath.includes(d.id) ? 25 : 20);
